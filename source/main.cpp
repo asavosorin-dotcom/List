@@ -2,8 +2,13 @@
 
 extern FILE* file_htm;
 
-// проверка на зациклинность всех трех списков
-// печать ошибочного элемента
+// линеаризация
+
+// классический список next
+// сравнить скорость 
+// лучше переписывать в другой блок памяти (так быстрее)
+// реалокация вверх 
+// реалокация вниз 
 
 int main()
 {
@@ -19,13 +24,20 @@ int main()
     LISTAppendBefore(list, 1, 10);
     LISTAppendBefore(list, 1, 10);
     LISTAppendBefore(list, 1, 10);
-    ListDump(&list, "After AppendBefore");
 
-    LISTDelete(list, 1);
-    LISTDelete(list, 3);
-    LISTDelete(list, 5);
+    ListDump(&list, "List OK");
+        
+    // list.next[0] = list.free;
+    // ListVerify(&list, __LINE__, __func__);
 
-    ListDump(&list, "After Delete");
+    // ListDump(&list, "List cicle free");
+    // LISTAppendBefore(list, 1, 10);
+
+    // LISTDelete(list, 1);
+    // LISTDelete(list, 3);
+    // LISTDelete(list, 5);
+
+    // ListDump(&list, "After Delete");
 
     ListDtor(&list);
     fclose(file_htm);

@@ -24,6 +24,7 @@ typedef struct {
 
     int    free;
 
+    int count_elem = 0;
     size_t size;
 
     Passport_t passport;
@@ -32,9 +33,9 @@ typedef struct {
 void ListCtor(List_t* list, size_t size, int line, const char* filename, const char* funcname);
 void ListDtor (List_t* list);
 
-int ListAppendAfter (List_t* list, int index, int elem, const char* funcname, const char* filename, int line);
-int ListAppendBefore(List_t* list, int index, int elem, const char* funcname, const char* filename, int line);
-int ListDelete(List_t* list, int index, const char* funcname, const char* filename, int line);
+int ListAppendAfter (List_t* list, int index, int elem, const char* filename, int line);
+int ListAppendBefore(List_t* list, int index, int elem, const char* filename, int line);
+int ListDelete(List_t* list, int index, const char* filename, int line);
 
 void ListDumpImage (List_t* list);
 void ListDump (List_t* list, const char* text);
@@ -53,13 +54,13 @@ void ListPrevInit(List_t* list);
 #define PRINT_IMAGE(...) fprintf(file_dump, __VA_ARGS__)
 #define PRINT_HTM(...)   fprintf(file_htm, __VA_ARGS__)
 
-#define PRINT_ERR(...) printf(BOLD_RED "list name = %s\n made from = %s:%d\n %s:%d pointer list is NULL\n", list->passport.name, list->passport.funcname, list->passport.line, funcname, line);
+#define PRINT_ERR(error) printf(RED "list name = %s\n made from = %s:%d\n %s:%d" RESET BOLD_RED" ERROR:" error, list->passport.name, list->passport.funcname, list->passport.line, funcname, line);
 #define PRINT_ERR_INDEX(...) printf(BOLD_RED "%s:%d: in func %s ", filename, line, __func__); printf(__VA_ARGS__); printf(RESET);
 
 
-#define LISTAppendAfter(name, index, value) ListAppendAfter(&name, index, value, __func__, __FILE__, __LINE__)
-#define LISTAppendBefore(name, index, value) ListAppendBefore(&name, index, value, __func__, __FILE__, __LINE__)
-#define LISTDelete(name, index) ListDelete(&name, index, __func__, __FILE__, __LINE__)
+#define LISTAppendAfter(name, index, value) ListAppendAfter(&name, index, value, __FILE__, __LINE__)
+#define LISTAppendBefore(name, index, value) ListAppendBefore(&name, index, value,  __FILE__, __LINE__)
+#define LISTDelete(name, index) ListDelete(&name, index, __FILE__, __LINE__)
 
 #define SET_GREEN_NODE ", fillcolor = \"#C0FFC0\""
 #define SET_RED_NODE ", fillcolor = gray"
@@ -79,7 +80,10 @@ enum ListErr_t {
                 OK        = 0, 
                 ERR_LIST  = 1,
                 ERR_INDEX = 2,
-                ERR_FREE  = 4 
+                ERR_FREE  = 4, 
+                ERR_CICLE_FREE = 8,
+                ERR_CICLE_NEXT = 16, 
+                ERR_CICLE_PREV = 32
                 };
 
 #endif

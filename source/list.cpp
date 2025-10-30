@@ -32,7 +32,7 @@ void ListDtor(List_t* list)
     list->free = 1;
 }
 
-int ListAppendAfter (List_t* list, int index, int elem, ONDEBUG_LIST(const char* funcname), ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
+int ListAppendAfter (List_t* list, int index, int elem, ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
 {    
     int err = OK;
     int nextfree = 0; 
@@ -60,10 +60,12 @@ int ListAppendAfter (List_t* list, int index, int elem, ONDEBUG_LIST(const char*
     // printf("next[%d] %d\n", index, list->next[index]);
     list->free = nextfree;
 
+    list->count_elem++;
+
     return err;
 }
 
-int ListAppendBefore (List_t* list, int index, int elem, ONDEBUG_LIST(const char* funcname), ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
+int ListAppendBefore (List_t* list, int index, int elem, ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
 {    
     int err = OK;
     int nextfree = 0; 
@@ -95,11 +97,12 @@ int ListAppendBefore (List_t* list, int index, int elem, ONDEBUG_LIST(const char
     // PRINT_DEBUG(BOLD_BLUE, "tail = [%d]\n", list->tail);
     
     list->free = nextfree;
+    list->count_elem++;
 
     return err;
 }
 
-int ListDelete(List_t* list, int index, ONDEBUG_LIST(const char* funcname), ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
+int ListDelete(List_t* list, int index, ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
 {
     int err = OK;
     
@@ -121,6 +124,8 @@ int ListDelete(List_t* list, int index, ONDEBUG_LIST(const char* funcname), ONDE
 
     list->next[index] = list->free;
     list->free = index;
+
+    list->count_elem--;
 
     return err;
 }
@@ -198,6 +203,56 @@ int ListVerify(List_t* list, int line, const char* funcname)
         return ERR_LIST;
     }
 
+    if (list->next[0] == list->free)
+    {
+        PRINT_ERR("cicle list free\n")
+        return ERR_CICLE_FREE;
+    }
+
+    int counter = 0;
+
+    for (int index = list->next[0]; index != 0; index = list->next[index], counter++)
+    {
+        if (counter > list->count_elem || index >= (int) list->size)
+        {
+            PRINT_ERR("no cicle list next\n");
+            return ERR_CICLE_NEXT;
+        }
+    }
+
+    if (counter != list->count_elem)
+    {
+        PRINT_ERR("count elem in list != count elem in next\n");
+    }
+
+    counter = 0;
+
+    for (int index = list->prev[0]; index != 0; index = list->prev[index], counter++)
+    {
+        if (counter > list->count_elem || index >= (int) list->size)
+        {
+            PRINT_ERR("no cicle list prev\n");
+            return ERR_CICLE_PREV;
+        }
+    }
+
+    counter = 0;
+
+    for (int index = list->free; index != 0; index = list->next[index], counter++)
+    {
+        if (counter > list->count_elem || index >= (int) list->size)
+        {
+            PRINT_ERR("no cicle list prev\n");
+            return ERR_CICLE_PREV;
+        }
+    }
+
+    if (counter != (int) list->size - list->count_elem)
+    {
+        PRINT_ERR("wrong count elem in free\n");
+        return ERR_CICLE_FREE;
+    }
+
     return OK;
 }
 
@@ -262,30 +317,28 @@ void ListDumpImage (List_t* list) // сделать Dump, который буд�
     //---------------------------------------------------------------------------------------------------
     
     //--------------------------------------------------NEXT---------------------------------------------
-    PRINT_IMAGE("\t{\n \tedge[constraint = false, color = red, weight = 1];\n");
+    PRINT_IMAGE("\t{\n \tedge[constraint = false, color = gray, weight = 1, dir = both];\n");
 
     PRINT_IMAGE("\tnode0 -> node%d\n", list->next[0]);
+
     for (int i = list->next[0]; i != 0; i = list->next[i])
     {
-        PRINT_IMAGE("\tnode%d -> node%d\n", i, list->next[i]);
+        if (list->prev[list->next[i]] != i)
+        {
+            PRINT_IMAGE("\t}\n");
+            PRINT_IMAGE("node%d -> node%d [color = blue]\n", i, list->next[i]);
+            PRINT_IMAGE("nodeERR[label = \"%d\", shape = octagon, fontcolor = \"red\", color = \"red\"]\n", list->prev[list->next[i]]);
+            PRINT_IMAGE("node%d -> nodeERR [color = \"red\"]\n", list->next[i]);
+            PRINT_IMAGE("\t{\n \tedge[constraint = false, color = gray, weight = 1, dir = both];\n");
+        }
+        else
+            PRINT_IMAGE("\tnode%d -> node%d\n", i, list->next[i]);
+
     }
 
     PRINT_IMAGE("\t}\n");
     //---------------------------------------------------------------------------------------------------
 
-    //--------------------------------------------------PREV---------------------------------------------
-    PRINT_IMAGE("\t{\n \tedge[color = blue, weight = 1];\n");
-
-    PRINT_IMAGE("\tnode0 -> node%d\n", list->prev[0]);
-
-    for (int i = list->prev[0]; i != 0; i = list->prev[i])
-    {
-        // PRINT_DEBUG(BOLD_BLUE, "[%zu]", i);
-        PRINT_IMAGE("\tnode%d -> node%d\n", i, list->prev[i]);
-    }
-
-    PRINT_IMAGE("\t}\n");
-    //---------------------------------------------------------------------------------------------------   
 
     //-------------------------------------------------FREE----------------------------------------------
     PRINT_IMAGE("\t{\n \tedge[color = green, weight = 1, constraint=false];\n");
