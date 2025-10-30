@@ -8,27 +8,39 @@
 
 #include "colors.h"
 
+#define DEBUG_LIST
+
+typedef struct {
+    const char* name;
+    const char* funcname;
+    const char* filename;
+    int   line;
+} Passport_t;
+
 typedef struct {
     int*   data;
     int*   next;
     int*   prev;
 
-    int    head;
-    int    tail;
     int    free;
 
     size_t size;
+
+    Passport_t passport;
 } List_t;
 
-void ListCtor (List_t* list, size_t size);
+void ListCtor(List_t* list, size_t size, int line, const char* filename, const char* funcname);
 void ListDtor (List_t* list);
 
-void ListAppendAfter(List_t* list, int index, int elem);
-void ListAppendBefore(List_t* list, int index, int elem);
-void ListDelete(List_t* list, int index);
+int ListAppendAfter (List_t* list, int index, int elem, const char* funcname, const char* filename, int line);
+int ListAppendBefore(List_t* list, int index, int elem, const char* funcname, const char* filename, int line);
+int ListDelete(List_t* list, int index, const char* funcname, const char* filename, int line);
 
 void ListDumpImage (List_t* list);
-void ListDumpWeb   (List_t* list);
+void ListDump (List_t* list, const char* text);
+
+int ListVerify(List_t* list, int line, const char* funcname);
+int ListIndexVerify(List_t* list, int index, const char* filename, int line);
 
 void ListDataInit(List_t* list);
 void ListNextInit(List_t* list);
@@ -39,12 +51,35 @@ void ListPrevInit(List_t* list);
 #define POISON 0xDEADDED
 
 #define PRINT_IMAGE(...) fprintf(file_dump, __VA_ARGS__)
-#define PRINT_HTM(...) fprintf(file_htm, __VA_ARGS__)
+#define PRINT_HTM(...)   fprintf(file_htm, __VA_ARGS__)
+
+#define PRINT_ERR(...) printf(BOLD_RED "list name = %s\n made from = %s:%d\n %s:%d pointer list is NULL\n", list->passport.name, list->passport.funcname, list->passport.line, funcname, line);
+#define PRINT_ERR_INDEX(...) printf(BOLD_RED "%s:%d: in func %s ", filename, line, __func__); printf(__VA_ARGS__); printf(RESET);
+
+
+#define LISTAppendAfter(name, index, value) ListAppendAfter(&name, index, value, __func__, __FILE__, __LINE__)
+#define LISTAppendBefore(name, index, value) ListAppendBefore(&name, index, value, __func__, __FILE__, __LINE__)
+#define LISTDelete(name, index) ListDelete(&name, index, __func__, __FILE__, __LINE__)
 
 #define SET_GREEN_NODE ", fillcolor = \"#C0FFC0\""
-#define SET_RED_NODE ", fillcolor = \"#FFC0C0\""
+#define SET_RED_NODE ", fillcolor = gray"
 #define GREEN_NODE 1
 
-#define PRINT_DEBUG(COLOR, ...) printf(COLOR, ":%s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf(RESET);
+#ifdef DEBUG_LIST
+    #define ONDEBUG_LIST(func) func
+#else
+    #define ONDEBUG_LIST(func)
+#endif
+
+#define LISTCTOR(list_name, size) ListCtor(&list_name, size, __LINE__, __FILE__, __func__ ); list_name.passport.name = #list_name;
+
+#define PRINT_DEBUG(COLOR, ...) printf(COLOR "%s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf(RESET);
+
+enum ListErr_t {
+                OK        = 0, 
+                ERR_LIST  = 1,
+                ERR_INDEX = 2,
+                ERR_FREE  = 4 
+                };
 
 #endif

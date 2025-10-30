@@ -1,35 +1,34 @@
 #include "main.h"
 
-extern FILE* file_dump;
 extern FILE* file_htm;
+
+// проверка на зациклинность всех трех списков
+// печать ошибочного элемента
 
 int main()
 {
-    fprintf(file_dump, "digraph {\n");
     
     List_t list = {};
-    ListCtor(&list, 20);
-    ListAppendAfter(&list, 0, 10);
+    LISTCTOR(list, 10)
 
-    // ListDump(&list);
+    LISTAppendAfter(list, 0, 10);
+    LISTAppendAfter(list, 1, 10);
 
-    ListAppendAfter(&list, 1, 30);
-    ListAppendBefore(&list, 2, 20);
-    ListAppendAfter(&list, 2, 40);
-    ListAppendAfter(&list, 4, 50);
-    ListAppendAfter(&list, 5, 60);
-    
-    
-    ListAppendAfter(&list, 3, 91);
-    ListDelete(&list, 1);
+    LISTAppendBefore(list, 1, 10);
+    LISTAppendBefore(list, 1, 10);
+    LISTAppendBefore(list, 1, 10);
+    LISTAppendBefore(list, 1, 10);
+    LISTAppendBefore(list, 1, 10);
+    ListDump(&list, "After AppendBefore");
 
-    ListDumpImage(&list);
-    ListDumpWeb(&list);
+    LISTDelete(list, 1);
+    LISTDelete(list, 3);
+    LISTDelete(list, 5);
 
-    printf("%d\n", list.data[1]);
+    ListDump(&list, "After Delete");
 
     ListDtor(&list);
+    fclose(file_htm);
 
-    fprintf(file_dump, "}");
-    fclose(file_dump);
+    return 0;
 }

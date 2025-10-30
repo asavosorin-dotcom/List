@@ -1,20 +1,24 @@
 #include "list.h"
-
-FILE* file_dump = fopen("text.txt", "w");
 FILE* file_htm  = fopen("Logfile.htm", "w");
 
-void ListCtor(List_t* list, size_t size)
-{
-    list->size = size;
 
+static int index_png = 0;
+
+void ListCtor(List_t* list, size_t size, int line, const char* filename, const char* funcname)
+{
+    assert(list);
+
+    list->size = size;
     
     ListDataInit(list);
     ListNextInit(list);
     ListPrevInit(list);
     
-    list->head = 1;
-    list->tail = 1;
     list->free = 1;
+
+    list->passport.line     = line;
+    list->passport.filename = filename;
+    list->passport.funcname = funcname;
 }
 
 void ListDtor(List_t* list)
@@ -24,53 +28,62 @@ void ListDtor(List_t* list)
     free(list->next);
     free(list->prev);
 
-    list->head = 1;
-    list->tail = 1;
+
     list->free = 1;
 }
 
-void ListAppendAfter (List_t* list, int index, int elem)
+int ListAppendAfter (List_t* list, int index, int elem, ONDEBUG_LIST(const char* funcname), ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
 {    
+    int err = OK;
     int nextfree = 0; 
-    static int count_append = 0;
 
-    printf("old_free = %d\n", list->free);
+    ONDEBUG_LIST(ListVerify(list, __LINE__, __func__));
+
+    ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));
+
+
+    // printf("old_free = %d\n", list->free);
     list->data[list->free] = elem;
     nextfree = list->next[list->free];
 
-    printf("next_free = [%d]\n", nextfree);
-
-    // if (count_append == 0)
-    // {
-    //     // list->head = index
-    //     // list->next[index + 1] = 0;
-    // }
+    // printf("next_free = [%d]\n", nextfree);
 
     list->next[list->free] = list->next[index];
 
     list->prev[list->free] = index;
 
-    printf("list->next[%d] = %d\n", list->free, list->next[index]);
+    // printf("list->next[%d] = %d\n", list->free, list->next[index]);
 
     list->prev[list->next[index]] = list->free;
     list->next[index] = list->free;
         
-    printf("next[%d] %d\n", index, list->next[index]);
+    // printf("next[%d] %d\n", index, list->next[index]);
     list->free = nextfree;
 
-    count_append++;
+    return err;
 }
 
-void ListAppendBefore (List_t* list, int index, int elem)
+int ListAppendBefore (List_t* list, int index, int elem, ONDEBUG_LIST(const char* funcname), ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
 {    
+    int err = OK;
     int nextfree = 0; 
-    static int count_append = 0;
+    
+    ONDEBUG_LIST(ListVerify(list, __LINE__, __func__));
+    ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));
+    
+    #ifdef DEBUG_LIST
+        if (index >= (int) list->size || index < 0)
+        {
+            PRINT_DEBUG(BOLD_RED, "ERROR: index out of range!\n");
+            return ERR_INDEX;
+        }
+    #endif
 
-    printf("old_free = %d\n", list->free);
+    // printf("old_free = %d\n", list->free);
     list->data[list->free] = elem;
     nextfree = list->next[list->free];
 
-    printf("next_free = [%d]\n", nextfree);
+    // printf("next_free = [%d]\n", nextfree);
 
     list->next[list->free] = index;
 
@@ -79,16 +92,28 @@ void ListAppendBefore (List_t* list, int index, int elem)
     list->next[list->prev[index]] = list->free;
     list->prev[index] = list->free;
 
-    PRINT_DEBUG(BOLD_BLUE, "tail = [%d]\n", list->tail);
+    // PRINT_DEBUG(BOLD_BLUE, "tail = [%d]\n", list->tail);
     
-    printf("next[%d] %d\n", index, list->next[index]);
     list->free = nextfree;
 
-    count_append++;
+    return err;
 }
 
-void ListDelete(List_t* list, int index)
+int ListDelete(List_t* list, int index, ONDEBUG_LIST(const char* funcname), ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
 {
+    int err = OK;
+    
+    ONDEBUG_LIST(ListVerify(list, __LINE__, __func__));
+    ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));    ListVerify(list, __LINE__, __func__);
+
+    #ifdef DEBUG_LIST
+        if (index >= (int) list->size || index < 0)
+        {
+            PRINT_DEBUG(BOLD_RED, "ERROR: index out of range!\n");
+            return ERR_INDEX;
+        }
+    #endif
+
     list->data[index] = 0;
 
     list->next[list->prev[index]] = list->next[index];
@@ -96,6 +121,8 @@ void ListDelete(List_t* list, int index)
 
     list->next[index] = list->free;
     list->free = index;
+
+    return err;
 }
 
 void ListDataInit(List_t* list)
@@ -140,11 +167,74 @@ void ListPrevInit(List_t* list)
     // list->prev[0] = 1;
 }
 
+#ifdef DEBUG_LIST
+int ListVerify(List_t* list, int line, const char* funcname)
+{
+    if (list == NULL) 
+    {
+        PRINT_ERR("pointer list is NULL\n")
+        return ERR_LIST;
+    }
+    
+    if (list->free == 0)
+    {
+        PRINT_ERR("list overflow\n")
+        return ERR_FREE;
+    }
+    
+    if (list->next == NULL) 
+    {
+        PRINT_ERR("pointer next is NULL\n")
+        return ERR_LIST;
+    }
+    if (list->prev == NULL) 
+    {
+        PRINT_ERR("pointer prev is NULL\n")
+        return ERR_LIST;
+    }
+    if (list->data == NULL) 
+    {
+        PRINT_ERR("pointer data is NULL\n")
+        return ERR_LIST;
+    }
+
+    return OK;
+}
+
+int ListIndexVerify(List_t* list, int index, const char* filename, int line)
+{
+    if (index >= (int) list->size || index < 0)
+        {
+            PRINT_ERR_INDEX("ERROR: index out of range!\n");
+            return ERR_INDEX;
+        }
+
+    for (int index_in_free = list->free; index_in_free != 0; index_in_free = list->next[index_in_free])
+    {
+        if (index_in_free == index)
+        {
+            PRINT_ERR_INDEX("ERROR: index out of range!\n");
+            return ERR_INDEX;
+        }
+    }
+
+    return OK;
+}
+
+#endif
+
 void ListDumpImage (List_t* list) // сделать Dump, который будет делать много картинок
 {    
+    
+    const char* filename = "graph_code.txt";
+    FILE* file_dump = fopen(filename, "w");
+    assert(file_dump);
+
+    fprintf(file_dump, "digraph {\n");
+    
     PRINT_IMAGE("\trankdir=LR;\n\n");
 
-    PRINT_IMAGE("\tnode0[label = \" index = 0 | %d | {prev = %d | next = %d}\", shape = Mrecord, style = \"filled\", fillcolor = \"#C0FFC0\"]\n", list->data[0], list->prev[0], list->next[0]);
+    PRINT_IMAGE("\tnode0[label = \" index = 0 | %d | {prev = %d | next = %d}\", shape = Mrecord, style = \"filled\", fillcolor = \"#FFC0C0\"]\n", list->data[0], list->prev[0], list->next[0]);
 
     char* arr_colors_node = (char* ) calloc(list->size, sizeof(char));
 
@@ -172,7 +262,7 @@ void ListDumpImage (List_t* list) // сделать Dump, который буд�
     //---------------------------------------------------------------------------------------------------
     
     //--------------------------------------------------NEXT---------------------------------------------
-    PRINT_IMAGE("\t{\n \tedge[color = blue, weight = 1];\n");
+    PRINT_IMAGE("\t{\n \tedge[constraint = false, color = red, weight = 1];\n");
 
     PRINT_IMAGE("\tnode0 -> node%d\n", list->next[0]);
     for (int i = list->next[0]; i != 0; i = list->next[i])
@@ -184,7 +274,9 @@ void ListDumpImage (List_t* list) // сделать Dump, который буд�
     //---------------------------------------------------------------------------------------------------
 
     //--------------------------------------------------PREV---------------------------------------------
-    PRINT_IMAGE("\t{\n \tedge[color = red, weight = 1];\n");
+    PRINT_IMAGE("\t{\n \tedge[color = blue, weight = 1];\n");
+
+    PRINT_IMAGE("\tnode0 -> node%d\n", list->prev[0]);
 
     for (int i = list->prev[0]; i != 0; i = list->prev[i])
     {
@@ -208,18 +300,30 @@ void ListDumpImage (List_t* list) // сделать Dump, который буд�
     PRINT_IMAGE("\t}\n");
     //---------------------------------------------------------------------------------------------------
 
+    fprintf(file_dump, "}"); 
+    
+    char command[100] = "";
+    fclose(file_dump);
+
+    sprintf(command, "dot \"%s\" -T png -o pictures/graph%d.png", filename, index_png);
+    // printf("command = %s\n", command);
+    system(command);
+
+    index_png++;
+
     free(arr_colors_node);
 }
 
-void ListDumpWeb   (List_t* list)
+void ListDump (List_t* list, const char* text)
 {
     PRINT_HTM("<pre>\n");
-    PRINT_HTM("\t<h3>DUMP</h3>\n");
+    PRINT_HTM("\t<h3>DUMP %s</h3>\n", text);
 
     PRINT_HTM("\t      ");
+
     for (size_t i = 0; i < list->size; i++)
     {
-        PRINT_HTM("%3zu ", i);
+    PRINT_HTM("%3zu ", i);
     }
 
     PRINT_HTM("\n");
@@ -250,11 +354,12 @@ void ListDumpWeb   (List_t* list)
 
     PRINT_HTM("\n");
 
-    PRINT_HTM("\tHEAD: %d\n", list->head);
-    PRINT_HTM("\tTAIL: %d\n", list->tail);
+    ListDumpImage(list);
 
-    PRINT_HTM("Image: \n <img src= \"text.png\" width = \"4000\" height = \"200\">");
+    PRINT_HTM("Image: \n <img src= \"pictures/graph%d.png\" width = \"1000\" height = \"200\">", index_png - 1);
+
     PRINT_HTM("</pre>");
+
 }
 
 // int List_get_elem(List_t* list, int index)
