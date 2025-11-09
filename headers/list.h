@@ -8,7 +8,13 @@
 
 #include "colors.h"
 
-#define DEBUG_LIST
+// #define DEBUG_LIST
+
+#ifdef DEBUG_LIST
+    #define ONDEBUG_LIST(...) __VA_ARGS__
+#else
+    #define ONDEBUG_LIST(...) 
+#endif
 
 typedef struct {
     const char* name;
@@ -33,9 +39,17 @@ typedef struct {
 void ListCtor(List_t* list, size_t size, int line, const char* filename, const char* funcname);
 void ListDtor (List_t* list);
 
-int ListAppendAfter (List_t* list, int index, int elem, const char* filename, int line);
-int ListAppendBefore(List_t* list, int index, int elem, const char* filename, int line);
-int ListDelete(List_t* list, int index, const char* filename, int line);
+#ifdef DEBUG_LIST
+    int ListAppendAfter  (List_t* list, int index, int elem, const char* filename, int line);
+    int ListAppendBefore (List_t* list, int index, int elem, const char* filename, int line);
+    int ListDelete       (List_t* list, int index, const char* filename, int line);
+#else
+    int ListAppendAfter  (List_t* list, int index, int elem);
+    int ListAppendBefore (List_t* list, int index, int elem);
+    int ListDelete       (List_t* list, int index);
+#endif
+
+void ListLineal(List_t* list);
 
 void ListDumpImage (List_t* list);
 void ListDump (List_t* list, const char* text);
@@ -46,6 +60,9 @@ int ListIndexVerify(List_t* list, int index, const char* filename, int line);
 void ListDataInit(List_t* list);
 void ListNextInit(List_t* list);
 void ListPrevInit(List_t* list);
+
+void ListReallocUp(List_t* list);
+void ListReallocDown(List_t* list);
 
 #define FREE(point) free(point); point = NULL;
 
@@ -58,29 +75,24 @@ void ListPrevInit(List_t* list);
 #define PRINT_ERR_INDEX(...) printf(BOLD_RED "%s:%d: in func %s ", filename, line, __func__); printf(__VA_ARGS__); printf(RESET);
 
 
-#define LISTAppendAfter(name, index, value) ListAppendAfter(&name, index, value, __FILE__, __LINE__)
-#define LISTAppendBefore(name, index, value) ListAppendBefore(&name, index, value,  __FILE__, __LINE__)
-#define LISTDelete(name, index) ListDelete(&name, index, __FILE__, __LINE__)
+#define LISTAppendAfter(name, index, value) ListAppendAfter(&name, index, value ONDEBUG_LIST(, __FILE__, __LINE__))
+#define LISTAppendBefore(name, index, value) ListAppendBefore(&name, index, value  ONDEBUG_LIST(, __FILE__, __LINE__))
+#define LISTDelete(name, index) ListDelete(&name, index ONDEBUG_LIST(, __FILE__, __LINE__))
 
 #define SET_GREEN_NODE ", fillcolor = \"#C0FFC0\""
 #define SET_RED_NODE ", fillcolor = gray"
 #define GREEN_NODE 1
 
-#ifdef DEBUG_LIST
-    #define ONDEBUG_LIST(func) func
-#else
-    #define ONDEBUG_LIST(func)
-#endif
 
 #define LISTCTOR(list_name, size) ListCtor(&list_name, size, __LINE__, __FILE__, __func__ ); list_name.passport.name = #list_name;
 
 #define PRINT_DEBUG(COLOR, ...) printf(COLOR "%s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf(RESET);
 
 enum ListErr_t {
-                OK        = 0, 
-                ERR_LIST  = 1,
-                ERR_INDEX = 2,
-                ERR_FREE  = 4, 
+                OK             = 0, 
+                ERR_LIST       = 1,
+                ERR_INDEX      = 2,
+                ERR_FREE       = 4, 
                 ERR_CICLE_FREE = 8,
                 ERR_CICLE_NEXT = 16, 
                 ERR_CICLE_PREV = 32

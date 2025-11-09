@@ -1,7 +1,7 @@
 #include "list.h"
-FILE* file_htm  = fopen("Logfile.htm", "w");
+// FILE* file_htm  = fopen("Logfile.htm", "w");
 
-
+extern FILE* file_htm;
 static int index_png = 0;
 
 void ListCtor(List_t* list, size_t size, int line, const char* filename, const char* funcname)
@@ -32,16 +32,22 @@ void ListDtor(List_t* list)
     list->free = 1;
 }
 
-int ListAppendAfter (List_t* list, int index, int elem, ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
+int ListAppendAfter (List_t* list, int index, int elem ONDEBUG_LIST(, const char* filename, int line))
 {    
     int err = OK;
     int nextfree = 0; 
 
     ONDEBUG_LIST(ListVerify(list, __LINE__, __func__));
-
     ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));
 
+    #ifdef DEBUG_LISTS
 
+    if (list->count_elem == list->size - 2)
+    {
+        ListReallocUp(list);
+    }
+
+    #endif
     // printf("old_free = %d\n", list->free);
     list->data[list->free] = elem;
     nextfree = list->next[list->free];
@@ -65,20 +71,26 @@ int ListAppendAfter (List_t* list, int index, int elem, ONDEBUG_LIST(const char*
     return err;
 }
 
-int ListAppendBefore (List_t* list, int index, int elem, ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
+int ListAppendBefore (List_t* list, int index, int elem ONDEBUG_LIST(, const char* filename, int line))
 {    
     int err = OK;
     int nextfree = 0; 
     
     ONDEBUG_LIST(ListVerify(list, __LINE__, __func__));
     ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));
-    
     #ifdef DEBUG_LIST
-        if (index >= (int) list->size || index < 0)
-        {
-            PRINT_DEBUG(BOLD_RED, "ERROR: index out of range!\n");
-            return ERR_INDEX;
-        }
+    
+    if (list->count_elem == list->size - 2)
+    {
+        ListReallocUp(list);
+    }
+
+    if (index >= (int) list->size || index < 0)
+    {
+        PRINT_DEBUG(BOLD_RED, "ERROR: index out of range!\n");
+        return ERR_INDEX;
+    }
+
     #endif
 
     // printf("old_free = %d\n", list->free);
@@ -102,12 +114,12 @@ int ListAppendBefore (List_t* list, int index, int elem, ONDEBUG_LIST(const char
     return err;
 }
 
-int ListDelete(List_t* list, int index, ONDEBUG_LIST(const char* filename), ONDEBUG_LIST(int line))
+int ListDelete(List_t* list, int index ONDEBUG_LIST(, const char* filename, int line))
 {
     int err = OK;
     
     ONDEBUG_LIST(ListVerify(list, __LINE__, __func__));
-    ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));    ListVerify(list, __LINE__, __func__);
+    ONDEBUG_LIST(ListIndexVerify(list, index, filename, line));    
 
     #ifdef DEBUG_LIST
         if (index >= (int) list->size || index < 0)
@@ -115,6 +127,13 @@ int ListDelete(List_t* list, int index, ONDEBUG_LIST(const char* filename), ONDE
             PRINT_DEBUG(BOLD_RED, "ERROR: index out of range!\n");
             return ERR_INDEX;
         }
+        
+        if (list->count_elem == list->size / 4)
+        {
+            ListLineal(list);
+            ListReallocDown(list);
+        }
+        
     #endif
 
     list->data[index] = 0;
@@ -239,15 +258,9 @@ int ListVerify(List_t* list, int line, const char* funcname)
     counter = 0;
 
     for (int index = list->free; index != 0; index = list->next[index], counter++)
-    {
-        if (counter > list->count_elem || index >= (int) list->size)
-        {
-            PRINT_ERR("no cicle list prev\n");
-            return ERR_CICLE_PREV;
-        }
-    }
+    {;}
 
-    if (counter != (int) list->size - list->count_elem)
+    if (counter + 1 != (int) list->size - list->count_elem)
     {
         PRINT_ERR("wrong count elem in free\n");
         return ERR_CICLE_FREE;
@@ -260,7 +273,7 @@ int ListIndexVerify(List_t* list, int index, const char* filename, int line)
 {
     if (index >= (int) list->size || index < 0)
         {
-            PRINT_ERR_INDEX("ERROR: index out of range!\n");
+            PRINT_ERR_INDEX("ERROR: index out of range!\n index = [%d]\n", index);
             return ERR_INDEX;
         }
 
@@ -278,9 +291,8 @@ int ListIndexVerify(List_t* list, int index, const char* filename, int line)
 
 #endif
 
-void ListDumpImage (List_t* list) // сделать Dump, который будет делать много картинок
+void ListDumpImage (List_t* list) 
 {    
-    
     const char* filename = "graph_code.txt";
     FILE* file_dump = fopen(filename, "w");
     assert(file_dump);
@@ -367,6 +379,43 @@ void ListDumpImage (List_t* list) // сделать Dump, который буд�
     free(arr_colors_node);
 }
 
+void ListLineal(List_t* list)
+{
+    int* lin_data = (int* ) calloc(list->size, sizeof(int));
+    int* lin_next = (int* ) calloc(list->size, sizeof(int));
+    int* lin_prev = (int* ) calloc(list->size, sizeof(int));
+
+    int index_lin = 0;
+
+    for (int index_data = 0; index_lin <= list->count_elem; index_lin++, index_data = list->next[index_data])
+    {
+        lin_data[index_lin] = list->data[index_data];
+        lin_next[index_lin] = index_lin + 1;
+        lin_prev[index_lin] = index_lin - 1;
+    }
+
+    for (int index = 0; index < (int) list->size; index++)
+    {
+        lin_next[index] = index + 1;
+        lin_prev[index] = index - 1;      
+    }
+
+    lin_prev[0] = index_lin - 1;
+    lin_next[index_lin - 1] = 0;
+    lin_next[list->size - 1] = 0;
+
+    list->free = index_lin;
+
+    FREE(list->data);
+    FREE(list->next);
+    FREE(list->prev);
+    
+    list->data = lin_data;
+    list->next = lin_next;
+    list->prev = lin_prev;
+
+}
+
 void ListDump (List_t* list, const char* text)
 {
     PRINT_HTM("<pre>\n");
@@ -412,9 +461,66 @@ void ListDump (List_t* list, const char* text)
     PRINT_HTM("Image: \n <img src= \"pictures/graph%d.png\" width = \"1000\" height = \"200\">", index_png - 1);
 
     PRINT_HTM("</pre>");
+}
+
+void ListReallocUp(List_t* list)
+{
+    
+    int* new_point_data = (int* ) realloc(list->data, list->size * 2 * sizeof(int));
+    int* new_point_next = (int* ) realloc(list->next, list->size * 2 * sizeof(int));
+    int* new_point_prev = (int* ) realloc(list->prev, list->size * 2 * sizeof(int));
+
+
+    if (new_point_data != NULL && new_point_next != NULL && new_point_prev != NULL)
+    {
+        list->data = new_point_data;
+        list->next = new_point_next;
+        list->prev = new_point_prev;
+    }
+    else
+    {
+        PRINT_DEBUG(BOLD_RED, "NULL pointer in realloc");
+        printf(RESET "list->data = [%p]\n", list->data);
+        printf(RESET "list->next = [%p]\n", list->next);
+        printf(RESET "list->prev = [%p]\n", list->prev);
+    }
+
+    for (size_t index = list->size - 1; index < 2 * list->size; index++)
+    {        
+        list->next[index] = (int) index + 1;
+        list->prev[index] = (int) index - 1;
+        list->data[index] = 0;
+    }
+    list->next[2 * list->size - 1] = 0;
+
+    list->size *= 2;
 
 }
 
+void ListReallocDown(List_t* list)
+{
+    int* new_point_data = (int* ) realloc(list->data, list->size / 2 * sizeof(int));
+    int* new_point_next = (int* ) realloc(list->next, list->size / 2 * sizeof(int));
+    int* new_point_prev = (int* ) realloc(list->prev, list->size / 2 * sizeof(int));
+
+    if (new_point_data != NULL && new_point_next != NULL && new_point_prev != NULL)
+    {
+        list->data = new_point_data;
+        list->next = new_point_next;
+        list->prev = new_point_prev;
+    }
+    else
+    {
+        PRINT_DEBUG(BOLD_RED, "NULL pointer in realloc");
+        printf(RESET "list->data = [%p]\n", list->data);
+        printf(RESET "list->next = [%p]\n", list->next);
+        printf(RESET "list->prev = [%p]\n", list->prev);
+    }
+
+    list->next[list->size / 2 - 1] = 0;
+
+    list->size /= 2;
+}
 // int List_get_elem(List_t* list, int index)
 // {
 //    
