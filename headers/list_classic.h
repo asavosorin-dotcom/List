@@ -26,7 +26,7 @@ void ListDumpImage(List_elem_t* elem);
 void ListDumpClassic (List_elem_t* elem, const char* text);
 
 void ListDeleteElem(List_elem_t* elem);
-void ListDtor(List_elem_t* elem);
+void ListDtorClassic(List_elem_t* elem);
 // вставка, удаление, уничтожение 
 
 #endif

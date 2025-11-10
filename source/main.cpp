@@ -2,7 +2,7 @@
 
 extern FILE* file_htm;
 
-
+FILE* file_test = fopen("test_time.txt", "w");
 
 // линеаризация
 // классический список
@@ -68,18 +68,24 @@ int main()
     // // free(lin_data);
     // ListDtor(&list);
 
-    // start = ... число тактов
-    // end = ... xbckj nfrnjd
-    // два момента их разность число тактов
-
     // ListDump(elem0, "Before delete");
-
 
     // ListDump(elem0, "After delete");
 
-    TestTime();
+    List_elem_t* elem0 = ListElemCtor(0);
+    ListInsertAfter(elem0, 15);
+    ListInsertAfter(elem0, 25);
+    ListInsertAfter(elem0, 35);
+    ListInsertAfter(elem0, 45);
+
+    ListDumpClassic(elem0, "check");
+    ListDtorClassic(elem0);
+
+
+    // TestTime();
 
     fclose(file_htm);
+    fclose(file_test);
 
     return 0;
 }
@@ -90,40 +96,49 @@ void TestTime(void)
     LISTCTOR(list, 10)
 
     // что выключал, что включал
+    fprintf(file_test, "Counter takts my list: \n");
 
-    unsigned long long start1 = __rdtsc();
-    LISTAppendAfter(list, 0, 10);
-    LISTAppendAfter(list, 1, 10);
-    LISTAppendBefore(list, 1, 10);
-    LISTAppendBefore(list, 2, 20);
-    LISTAppendBefore(list, 3, 30);
-    LISTDelete(list, 5);
-    LISTDelete(list, 4);
-    LISTDelete(list, 3);
-    LISTDelete(list, 2);
-    LISTDelete(list, 1);
+    unsigned long long start1 = 0;
+    unsigned long long end1 = 0;
 
-    unsigned long long end1 = __rdtsc();
+    for (int j = 0; j < 10; j++)
+    {
+        start1 = __rdtsc();
+
+        for (int i = 0; i < 10000; i++)
+        {
+            LISTAppendAfter(list, 0, 10);
+            LISTDelete(list, 1);
+        }
+
+        end1 = __rdtsc();
+
+        fprintf(file_test, "%llu\n", end1 - start1);
+}
 
     ListDtor(&list);
 
-    printf("Counter takts = %llu\n", end1 - start1);
 
     List_elem_t* elem0 = ListElemCtor(0);
+    
+    fprintf(file_test, "Count takts classic: \n");
+    unsigned long long start = 0;
+    unsigned long long end = 0;
 
-    unsigned long long start = __rdtsc();
-    ListInsertAfter(elem0, 1);    
-    ListInsertAfter(elem0, 2);
-    ListInsertAfter(elem0, 3);
-    ListInsertAfter(elem0, 4);
-    ListInsertAfter(elem0, 5);
-    ListDeleteElem(elem0->next);
-    ListDeleteElem(elem0->next);
-    ListDeleteElem(elem0->next);
-    ListDeleteElem(elem0->next);
-    unsigned long long end = __rdtsc();
+    for (int j = 0; j < 10; j++)
+    {
+        start = __rdtsc();
+    
+        for (int i = 0; i < 10000; i++)
+        {
+            ListInsertAfter(elem0, 1);    
+            ListDeleteElem(elem0->next);
+        }
 
-    printf("Count classic takts = %llu\n", end - start);
+        end = __rdtsc();
+        fprintf(file_test, "%llu\n", end - start);
+    }
 
-    ListDtor(elem0);
+
+    ListDtorClassic(elem0);
 }

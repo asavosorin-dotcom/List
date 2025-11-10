@@ -46,14 +46,15 @@ void ListDeleteElem(List_elem_t* elem)
 void ListDumpElem(List_elem_t* elem, FILE* file_dump)
 {
     static List_elem_t* elem_zero = elem; 
-    
-    PRINT_IMAGE("\tnode%p[label = \"{%p | %d | {%p | %p}}\", shape = Mrecord, style = \"filled\", fillcolor = \"#C0FFC0\"]\n", elem , elem, elem->data, elem->prev, elem->next);
-
+ 
     if (elem->next != elem_zero)
     {
+        PRINT_IMAGE("\tnode%p[label = \"%p | %d | {%p | %p}\", shape = Mrecord, style = \"filled\", fillcolor = \"#C0FFC0\"]\n", elem , elem, elem->data, elem->prev, elem->next);
         ListDumpElem(elem->next, file_dump);
-        PRINT_IMAGE("\tnode%p -> node%p [color = \"blue\"]\n ", elem, elem->next);
+        PRINT_IMAGE("\tnode%p -> node%p [color = \"gray\", dir = both]\n ", elem, elem->next);
     }
+    
+
 }
 
 void ListDumpImage(List_elem_t* elem)
@@ -62,6 +63,10 @@ void ListDumpImage(List_elem_t* elem)
     FILE* file_dump = fopen(filename, "w");
     
     PRINT_IMAGE("digraph {\n");
+    PRINT_IMAGE("\trankdir=LR;\n\n");
+
+    PRINT_IMAGE("node%p[label = \"%p | %d | {%p | %p}\", shape = Mrecord, style = \"filled\", fillcolor = \"#FFC0C0\"]\n", elem , elem, elem->data, elem->prev, elem->next);
+    PRINT_IMAGE("node%p -> node%p [color = \"gray\", dir = both]", elem, elem->next);
     ListDumpElem(elem->next, file_dump);
 
     PRINT_IMAGE("}");
@@ -87,7 +92,7 @@ void ListDumpClassic (List_elem_t* elem, const char* text)
     PRINT_HTM("</pre>");
 }
 
-void ListDtor(List_elem_t* elem)
+void ListDtorClassic(List_elem_t* elem)
 {
     for (List_elem_t* element = elem->next; element != elem; )
     {
